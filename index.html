@@ -16,13 +16,6 @@
             
             --accent-color: #ffffff; 
             --accent-glow: 0 0 15px rgba(255, 255, 255, 0.3), 0 0 30px rgba(255, 255, 255, 0.1);
-            
-            .goob-logo {
-                width: 32px;
-                height: 32px;
-                object-fit: contain;
-                border-radius: 10px;
-            }
 
             --text-light: #f4f4f5;
             --text-muted: #888888;
@@ -197,7 +190,7 @@
         
         .ai-avatar {
             width: 38px; height: 38px;
-            border-radius: 12px; /* Yuvarlak yerine teknolojik kare */
+            border-radius: 12px;
             background: linear-gradient(135deg, #222, #000);
             border: 1px solid #333;
             display: flex; align-items: center; justify-content: center;
@@ -295,7 +288,7 @@
 
         #send-btn {
             background-color: #fff; color: #000;
-            border: none; border-radius: 12px; /* Buton da teknolojik karemsi */
+            border: none; border-radius: 12px; 
             width: 40px; height: 40px;
             margin-bottom: 2px; margin-left: 15px;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
@@ -391,7 +384,7 @@
             <div class="message-container">
                 <div class="message-content-wrapper ai-row">
                     <div class="ai-avatar">
-                        <img src="assets/Goob.png" class="goob-logo">
+                        <img src="assets/Goob.png" style="width:38px;height:38px;border-radius:12px;">
                     </div>
                     <div class="ai-message">Merhaba, ben Goober Zeka (GooberAI). Sistemler çevrimiçi. Sana nasıl yardımcı olabilirim? 😊 🫂</div>
                 </div>
@@ -494,20 +487,16 @@
         initCanvas();
         drawParticles();
 
-        function getRandomApiKey() {
-            const validKeys = apiKeys.filter(key => key && key.trim() !== "");
-            if (validKeys.length === 0) return null;
-            return validKeys[Math.floor(Math.random() * validKeys.length)];
-        }
-
         const chatHistory = document.getElementById("chat-history");
         const userInput = document.getElementById("user-input");
         const sendBtn = document.getElementById("send-btn");
         const inputWrapper = document.getElementById("input-wrapper");
         const thinkingIndicator = document.getElementById("thinking-indicator");
 
-        // Sistemin Yeni Kimliği (Tamamen Güncellendi)
+        // GLOBAL: Çift mesaj engelleyici state
         let isSending = false;
+
+        // Sistemin Yeni Kimliği
         let messages = [
             {
                 "role": "system",
@@ -567,7 +556,7 @@
                 <div class="message-container">
                     <div class="message-content-wrapper ai-row">
                         <div class="ai-avatar">
-                        <img src="assets/Goob.png" class="goob-logo">
+                            <img src="assets/Goob.png" style="width:38px;height:38px;border-radius:12px;">
                         </div>
                         <div class="ai-message">Merhaba, ben Goober Zeka (GooberAI). Sistemler çevrimiçi. Sana nasıl yardımcı olabilirim? 😊 🫂</div>
                     </div>
@@ -609,7 +598,7 @@
             } else {
                 const avatar = document.createElement("div");
                 avatar.className = "ai-avatar";
-                avatar.innerHTML = `<img src="/assets/Goob.png" class="goob-logo">`;
+                avatar.innerHTML = `<img src="assets/Goob.png" style="width:38px;height:38px;border-radius:12px;">`;
                 wrapper.appendChild(avatar);
                 wrapper.appendChild(messageContent);
             }
@@ -633,8 +622,10 @@
         }
 
         async function sendMessage() {
+            // Çift mesaj engelleme kontrolü
             if(isSending) return;
             isSending = true;
+
             const text = userInput.value.trim();
 
             if(!text) {
@@ -664,48 +655,23 @@
                 });
 
                 if(!response.ok) throw new Error(`Sunucu Hatası: ${response.status}`);
-
-                thinkingIndicator.style.display = "none";
                 
+                thinkingIndicator.style.display = "none";
                 const data = await response.json();
-
-                let fullAiText = data.reply || "Cevap alınamadı.";
-
-                appendMessage(fullAiText, false);
+                
+                // Goober boş cevap vermez, JSON'a geçer
+                const replyText = data.reply || "Goober boş cevap verdi.";
+                
+                appendMessage(
+                    replyText,
+                    false
+                );
 
                 messages.push({
                     "role": "assistant",
-                    "content": fullAiText
+                    "content": replyText
                 });
 
-                // Stream okuma ve gerçek zamanlı renderlama
-                while(true) {
-                    const {done, value} = await reader.read();
-                    if(done) break;
-                    
-                    const chunk = decoder.decode(value, {stream: true});
-                    const lines = chunk.split("\n");
-                    
-                    for(const line of lines) {
-                        if(line.startsWith("data: ") && line !== "data: [DONE]") {
-                            try {
-                                const data = JSON.parse(line.substring(6));
-                                const delta = data.choices[0].delta.content || "";
-                                fullAiText += delta;
-                                
-                                // Markdown formatını güvenli anlık olarak işle
-                                aiResponseContent.innerHTML = formatText(fullAiText);
-                                
-                                // Uzun metin gelirken aşağı kaydırmaya devam et
-                                chatHistory.scrollTop = chatHistory.scrollHeight;
-                            } catch (e) {
-                                // Parçalı JSON atlanır
-                            }
-                        }
-                    }
-                }
-
-                messages.push({"role": "assistant", "content": fullAiText});
                 scrollToBottom();
 
             } catch (error) {
@@ -713,6 +679,7 @@
                 appendMessage("Ağ bağlantısında bir kesinti yaşandı. Lütfen tekrar veri gönder. 🫂", false);
                 console.error(error);
             } finally {
+                // Her durumda input state'i ve sending boolean'ı sıfırla
                 setInputState(false);
                 isSending = false;
             }
