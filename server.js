@@ -102,3 +102,9 @@ app.post("/api/chat", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Goober server running on ${PORT}`);
 });
+
+sendBtn.addEventListener("click", () => {
+    if(!sendBtn.disabled) {
+        sendMessage();
+    }
+});
