@@ -17,6 +17,13 @@
             --accent-color: #ffffff; 
             --accent-glow: 0 0 15px rgba(255, 255, 255, 0.3), 0 0 30px rgba(255, 255, 255, 0.1);
             
+            .goob-logo {
+                width: 32px;
+                height: 32px;
+                object-fit: contain;
+                border-radius: 10px;
+            }
+
             --text-light: #f4f4f5;
             --text-muted: #888888;
             
@@ -384,7 +391,7 @@
             <div class="message-container">
                 <div class="message-content-wrapper ai-row">
                     <div class="ai-avatar">
-                        <i class="fas fa-microchip"></i>
+                        <img src="assets/Goob.png" class="goob-logo">
                     </div>
                     <div class="ai-message">Merhaba, ben Goober Zeka (GooberAI). Sistemler çevrimiçi. Sana nasıl yardımcı olabilirim? 😊 🫂</div>
                 </div>
@@ -558,7 +565,9 @@
             chatHistory.innerHTML = `
                 <div class="message-container">
                     <div class="message-content-wrapper ai-row">
-                        <div class="ai-avatar"><i class="fas fa-microchip"></i></div>
+                        <div class="ai-avatar">
+                        <img src="assets/Goob.png" class="goob-logo">
+                        </div>
                         <div class="ai-message">Merhaba, ben Goober Zeka (GooberAI). Sistemler çevrimiçi. Sana nasıl yardımcı olabilirim? 😊 🫂</div>
                     </div>
                 </div>
@@ -651,11 +660,16 @@
 
                 thinkingIndicator.style.display = "none";
                 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                
-                let aiResponseContent = appendMessage("", false);
-                let fullAiText = "";
+                const data = await response.json();
+
+                let fullAiText = data.reply || "Cevap alınamadı.";
+
+                appendMessage(fullAiText, false);
+
+                messages.push({
+                    "role": "assistant",
+                    "content": fullAiText
+                });
 
                 // Stream okuma ve gerçek zamanlı renderlama
                 while(true) {
