@@ -23,6 +23,7 @@ const apiKeys = [
     process.env.GROQ_API_KEY_3,
     process.env.GROQ_API_KEY_4
 ].filter(Boolean);
+console.log("Bulunan API key:", apiKeys.length);
 
 let keyIndex = 0;
 
@@ -78,7 +79,7 @@ app.post("/api/chat", async (req, res) => {
             }
         );
 
-
+        console.log("Groq status:", response.status);
         const data = await response.json();
 
         res.json({
