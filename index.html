@@ -487,15 +487,6 @@
         initCanvas();
         drawParticles();
 
-        require("dotenv").config();
-
-        const apiKeys = [
-            process.env.GROQ_API_KEY_1,
-            process.env.GROQ_API_KEY_2,
-            process.env.GROQ_API_KEY_3,
-            process.env.GROQ_API_KEY_4
-        ].filter(Boolean);
-
         function getRandomApiKey() {
             const validKeys = apiKeys.filter(key => key && key.trim() !== "");
             if (validKeys.length === 0) return null;
@@ -634,12 +625,6 @@
         async function sendMessage() {
             const text = userInput.value.trim();
             if(!text) return;
-
-            const currentApiKey = getRandomApiKey();
-            if(!currentApiKey) {
-                appendMessage("Geçerli bir API anahtarı bulunamadı. Lütfen sistem ayarlarını kontrol et. ⚠️", false);
-                return;
-            }
 
             appendMessage(text, true);
             messages.push({"role": "user", "content": text});
