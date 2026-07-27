@@ -1,2 +1,1 @@
-# Goober-sich-ja
-agfhjööç
+this is gooberai. its an ai for hugs!
