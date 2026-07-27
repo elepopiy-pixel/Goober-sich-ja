@@ -6,105 +6,98 @@ import { fileURLToPath } from "url";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use(express.json());
-
-// Static dosyalar
 app.use(express.static(__dirname));
 
-// API Key havuzu
+
 const apiKeys = [
     process.env.GROQ_API_KEY_1,
     process.env.GROQ_API_KEY_2,
     process.env.GROQ_API_KEY_3,
     process.env.GROQ_API_KEY_4
 ].filter(Boolean);
-console.log("Bulunan API key:", apiKeys.length);
+
 
 let keyIndex = 0;
 
-function getApiKey() {
+function getApiKey(){
     const key = apiKeys[keyIndex];
     keyIndex = (keyIndex + 1) % apiKeys.length;
     return key;
 }
 
 
-// AI endpoint
-app.post("/api/chat", async (req, res) => {
-    try {
-        const { message } = req.body;
+app.post("/api/chat", async (req,res)=>{
 
-        if (!message) {
+    try {
+
+        const {message} = req.body;
+
+        if(!message){
             return res.status(400).json({
-                error: "Mesaj yok"
+                error:"Mesaj boş"
             });
         }
+
 
         const apiKey = getApiKey();
 
-        if (!apiKey) {
-            return res.status(500).json({
-                error: "API key bulunamadı"
-            });
-        }
+        console.log("Kullanılan key:", keyIndex);
 
 
         const response = await fetch(
             "https://api.groq.com/openai/v1/chat/completions",
             {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${apiKey}`
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json",
+                    "Authorization":`Bearer ${apiKey}`
                 },
-                body: JSON.stringify({
-                    model: "llama-3.1-8b-instant",
-                    messages: [
+                body:JSON.stringify({
+                    model:"llama-3.1-8b-instant",
+                    messages:[
                         {
-                            role: "system",
-                            content:
-                            "Sen Goober AI'sın. Sevecen, yardımsever ve arkadaş canlısısın."
+                            role:"system",
+                            content:"Sen GooberAI'sın. Sevecen, yardımsever ve ciddi bir yapay zekasın."
                         },
                         {
-                            role: "user",
-                            content: message
+                            role:"user",
+                            content:message
                         }
                     ]
                 })
             }
         );
 
-        console.log("Groq status:", response.status);
+
         const data = await response.json();
+
 
         res.json({
             reply:
-            data.choices?.[0]?.message?.content ||
-            "Cevap alınamadı."
+            data.choices?.[0]?.message?.content ??
+            "Boş cevap geldi."
         });
 
 
-    } catch (err) {
+    }catch(err){
+
         console.error(err);
 
         res.status(500).json({
-            error: "Sunucu hatası"
+            error:"Sunucu hatası"
         });
+
     }
+
 });
 
 
-app.listen(PORT, () => {
-    console.log(`Goober server running on ${PORT}`);
-});
-
-sendBtn.addEventListener("click", () => {
-    if(!sendBtn.disabled) {
-        sendMessage();
-    }
+app.listen(PORT,()=>{
+    console.log("Goober server running on",PORT);
 });
