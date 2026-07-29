@@ -1,7 +1,8 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
-import { getLlama, LlamaChatSession } from "node-llama-cpp";
+import { getLlama, createModelDownloader, LlamaChatSession } from "node-llama-cpp";
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -21,15 +22,29 @@ async function initLlamaModel() {
     console.log("⚙️  Llama Engine başlatılıyor...");
     llama = await getLlama();
 
-    console.log("🔍 Model HuggingFace üzerinden yükleniyor / indiriliyor...");
+    // Modeli kaydedeceğimiz yerel dosya yolu
+    const modelPath = path.join(__dirname, "Llama-3.2-1B-Instruct-Q4_K_M.gguf");
 
-    // node-llama-cpp v3'te HuggingFace URI'sini doğrudan loadModel'e "hf:" prefix'i ile verebilirsin:
-    model = await llama.loadModel({
-        modelPath: "hf:bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
-    });
+    // 1. Eğer model sunucuda önceden indirilmemişse HuggingFace'ten indiriyoruz
+    if (!fs.existsSync(modelPath)) {
+        console.log("🔍 Model yerelde bulunamadı, HuggingFace'ten indiriliyor...");
+        
+        const downloader = await createModelDownloader({
+            modelUrl: "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+            dirPath: __dirname,
+            fileName: "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+        });
 
-    console.log("✅ Model başarıyla belleğe yüklendi!");
+        // İndirme işlemini başlat ve bitmesini bekle
+        await downloader.download();
+        console.log("✅ İndirme tamamlandı!");
+    } else {
+        console.log("📂 Model zaten diskte mevcut, direkt yükleniyor...");
+    }
 
+    // 2. İndirilen tam dosya yolunu loadModel'e veriyoruz
+    console.log("🧠 Model belleğe yükleniyor...");
+    model = await llama.loadModel({ modelPath });
     context = await model.createContext();
 
     session = new LlamaChatSession({
@@ -37,7 +52,7 @@ async function initLlamaModel() {
         systemPrompt: "Sen Goober'sın! Neşeli ve yardımsever bir yapay zeka asistanısın."
     });
 
-    console.log("🚀 Goober Model Oturumu Başarıyla Hazırlandı!");
+    console.log("🚀 Goober Model Oturumu Başarıyla Oluşturuldu!");
 }
 
 initLlamaModel().catch((err) => {
@@ -54,7 +69,7 @@ app.post("/api/chat", async (req, res) => {
         const lastUserMessage = messages[messages.length - 1]?.content;
 
         if (!session) {
-            return res.status(503).json({ error: "Model henüz yükleniyor veya RAM sınırından dolayı başlatılamadı..." });
+            return res.status(503).json({ error: "Model henüz yükleniyor veya indiriliyor, lütfen bekleyin..." });
         }
 
         const reply = await session.prompt(lastUserMessage, {
@@ -66,10 +81,10 @@ app.post("/api/chat", async (req, res) => {
 
     } catch (err) {
         console.error("Inference Hatası:", err);
-        res.status(500).json({ error: "Model yanıt üretirken hata oluştu." });
+        res.status(500).json({ error: "Model yanıt üretirken bir hata oluştu." });
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`Goober Local Engine http://localhost:${PORT} adresinde aktif!`);
+    console.log(`Goober Local Server http://localhost:${PORT} adresinde aktif!`);
 });
