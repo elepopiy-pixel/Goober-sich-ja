@@ -22,42 +22,44 @@ async function initLlamaModel() {
     console.log("⚙️  Llama Engine başlatılıyor...");
     llama = await getLlama();
 
-    const modelPath = path.join(__dirname, "Llama-3.2-1B-Instruct-Q4_K_M.gguf");
+    const modelFileName = "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf";
+    const modelPath = path.join(__dirname, modelFileName);
 
+    // Modeli yerelde yoksa HuggingFace'ten indiriyoruz
     if (!fs.existsSync(modelPath)) {
-        console.log("🔍 Model yerelde bulunamadı, HuggingFace'ten indiriliyor...");
+        console.log("🔍 0.5B Model yerelde bulunamadı, HuggingFace'ten indiriliyor...");
         
         const downloader = await createModelDownloader({
-            modelUrl: "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+            modelUrl: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
             dirPath: __dirname,
-            fileName: "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+            fileName: modelFileName
         });
 
         await downloader.download();
-        console.log("✅ İndirme tamamlandı!");
+        console.log("✅ 0.5B Model başarıyla indirildi!");
     } else {
-        console.log("📂 Model zaten diskte mevcut, direkt yükleniyor...");
+        console.log("📂 0.5B Model zaten diskte mevcut, yükleniyor...");
     }
 
-    console.log("🧠 Model belleğe düşük RAM ayarlarıyla yükleniyor...");
+    console.log("🧠 Model minimum RAM ayarlarıyla belleğe yükleniyor...");
     
-    // RAM ÇÖKMESİNİ ENGELLEYEN AYARLAR:
     model = await llama.loadModel({ 
         modelPath,
-        gpuLayers: 0 // Sadece CPU kullan
+        gpuLayers: 0
     });
 
+    // RAM Tüketimini 512MB altında tutmak için kritik ayarlar:
     context = await model.createContext({
-        contextSize: 512, // Varsayılan 4096 yerine 512 token (RAM'i %70 tasarruf ettirir)
-        batchSize: 256
+        contextSize: 512,  // Bellek tasarrufu için 512 token
+        batchSize: 128
     });
 
     session = new LlamaChatSession({
         contextSequence: context.getSequence(),
-        systemPrompt: "Sen Goober'sın! Neşeli ve yardımsever bir yapay zeka asistanısın."
+        systemPrompt: "Sen Goober'sın! Neşeli, sevecen ve yardımsever bir yapay zeka asistanısın."
     });
 
-    console.log("🚀 Goober Model Oturumu Başarıyla Oluşturuldu!");
+    console.log("🚀 Goober 0.5B Local Model Oturumu Başarıyla Oluşturuldu!");
 }
 
 initLlamaModel().catch((err) => {
@@ -74,11 +76,11 @@ app.post("/api/chat", async (req, res) => {
         const lastUserMessage = messages[messages.length - 1]?.content;
 
         if (!session) {
-            return res.status(503).json({ error: "Model henüz yükleniyor veya indiriliyor, lütfen bekleyin..." });
+            return res.status(503).json({ error: "Model yükleniyor, lütfen bekleyin..." });
         }
 
         const reply = await session.prompt(lastUserMessage, {
-            maxTokens: 512,
+            maxTokens: 256,
             temperature: 0.7
         });
 
@@ -86,10 +88,10 @@ app.post("/api/chat", async (req, res) => {
 
     } catch (err) {
         console.error("Inference Hatası:", err);
-        res.status(500).json({ error: "Model yanıt üretirken bir hata oluştu." });
+        res.status(500).json({ error: "Model yanıt üretirken hata oluştu." });
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`Goober Local Server http://localhost:${PORT} adresinde aktif!`);
+    console.log(`Goober Local Engine http://localhost:${PORT} adresinde aktif!`);
 });
