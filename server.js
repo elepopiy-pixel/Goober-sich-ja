@@ -22,43 +22,6 @@ async function initLlamaModel() {
     console.log("⚙️  Llama Engine başlatılıyor...");
     llama = await getLlama();
 
-    // Modeli kaydedeceğimiz yerel dosya yolu
-    const modelPath = path.join(__dirname, "Llama-3.2-1B-Instruct-Q4_K_M.gguf");
-
-    // 1. Eğer model sunucuda önceden indirilmemişse HuggingFace'ten indiriyoruz
-    if (!fs.existsSync(modelPath)) {
-        console.log("🔍 Model yerelde bulunamadı, HuggingFace'ten indiriliyor...");
-        
-        const downloader = await createModelDownloader({
-            modelUrl: "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
-            dirPath: __dirname,
-            fileName: "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
-        });
-
-        // İndirme işlemini başlat ve bitmesini bekle
-        await downloader.download();
-        console.log("✅ İndirme tamamlandı!");
-    } else {
-        console.log("📂 Model zaten diskte mevcut, direkt yükleniyor...");
-    }
-
-    // 2. İndirilen tam dosya yolunu loadModel'e veriyoruz
-    console.log("🧠 Model belleğe yükleniyor...");
-    model = await llama.loadModel({ modelPath });
-    context = await model.createContext();
-
-    session = new LlamaChatSession({
-        contextSequence: context.getSequence(),
-        systemPrompt: "Sen Goober'sın! Neşeli ve yardımsever bir yapay zeka asistanısın."
-    });
-
-    console.log("🚀 Goober Model Oturumu Başarıyla Oluşturuldu!");
-}
-
-async function initLlamaModel() {
-    console.log("⚙️  Llama Engine başlatılıyor...");
-    llama = await getLlama();
-
     const modelPath = path.join(__dirname, "Llama-3.2-1B-Instruct-Q4_K_M.gguf");
 
     if (!fs.existsSync(modelPath)) {
@@ -96,6 +59,10 @@ async function initLlamaModel() {
 
     console.log("🚀 Goober Model Oturumu Başarıyla Oluşturuldu!");
 }
+
+initLlamaModel().catch((err) => {
+    console.error("❌ Model yüklenirken hata oluştu:", err);
+});
 
 app.post("/api/chat", async (req, res) => {
     try {
