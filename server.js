@@ -21,16 +21,15 @@ async function initLlamaModel() {
     console.log("⚙️  Llama Engine başlatılıyor...");
     llama = await getLlama();
 
-    console.log("🔍 Model HuggingFace'ten çekiliyor...");
+    console.log("🔍 Model HuggingFace üzerinden yükleniyor / indiriliyor...");
 
-    // HuggingFace URI formatı (v3 uyumlu)
-    const modelPath = await llama.getModelFile(
-        "hf:bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
-    );
+    // node-llama-cpp v3'te HuggingFace URI'sini doğrudan loadModel'e "hf:" prefix'i ile verebilirsin:
+    model = await llama.loadModel({
+        modelPath: "hf:bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+    });
 
-    console.log(`✅ Model indirildi/hazırlandı: ${modelPath}`);
+    console.log("✅ Model başarıyla belleğe yüklendi!");
 
-    model = await llama.loadModel({ modelPath });
     context = await model.createContext();
 
     session = new LlamaChatSession({
@@ -38,7 +37,7 @@ async function initLlamaModel() {
         systemPrompt: "Sen Goober'sın! Neşeli ve yardımsever bir yapay zeka asistanısın."
     });
 
-    console.log("🚀 Goober Model Oturumu Hazır!");
+    console.log("🚀 Goober Model Oturumu Başarıyla Hazırlandı!");
 }
 
 initLlamaModel().catch((err) => {
@@ -55,7 +54,7 @@ app.post("/api/chat", async (req, res) => {
         const lastUserMessage = messages[messages.length - 1]?.content;
 
         if (!session) {
-            return res.status(503).json({ error: "Model henüz yükleniyor, lütfen bekleyin..." });
+            return res.status(503).json({ error: "Model henüz yükleniyor veya RAM sınırından dolayı başlatılamadı..." });
         }
 
         const reply = await session.prompt(lastUserMessage, {
