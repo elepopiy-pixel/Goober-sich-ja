@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import cors from "cors";
 import { fileURLToPath } from "url";
 import { getLlama, createModelDownloader, LlamaChatSession } from "node-llama-cpp";
 
@@ -10,6 +11,8 @@ const PORT = process.env.PORT || 10000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// 1. CORS & JSON Middleware (Ağ Kesintisi ve Erişim Engellerini Önler)
+app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
@@ -41,16 +44,16 @@ async function initLlamaModel() {
         console.log("📂 0.5B Model zaten diskte mevcut, yükleniyor...");
     }
 
-    console.log("🧠 Model minimum RAM ayarlarıyla belleğe yükleniyor...");
+    console.log("🧠 Model ultra-hafif RAM ayarlarıyla belleğe yükleniyor...");
     
     model = await llama.loadModel({ 
         modelPath,
         gpuLayers: 0
     });
 
-    // RAM Tüketimini 512MB altında tutmak için kritik ayarlar:
+    // 512 MB RAM ve 50sn Timeout Sınırına Takılmamak İçin Hız Ayarları
     context = await model.createContext({
-        contextSize: 512,  // Bellek tasarrufu için 512 token
+        contextSize: 384, // Daha hızlı yanıt ve minimum RAM için 384 token
         batchSize: 128
     });
 
@@ -66,6 +69,7 @@ initLlamaModel().catch((err) => {
     console.error("❌ Model yüklenirken hata oluştu:", err);
 });
 
+// API Endpoint
 app.post("/api/chat", async (req, res) => {
     try {
         const { messages } = req.body;
@@ -76,11 +80,12 @@ app.post("/api/chat", async (req, res) => {
         const lastUserMessage = messages[messages.length - 1]?.content;
 
         if (!session) {
-            return res.status(503).json({ error: "Model yükleniyor, lütfen bekleyin..." });
+            return res.status(503).json({ error: "Model henüz yükleniyor, lütfen bekleyin..." });
         }
 
+        // Hızlı yanıt üretimi için maxTokens kısıtlaması
         const reply = await session.prompt(lastUserMessage, {
-            maxTokens: 256,
+            maxTokens: 128,  // Yanıt süresini 50 saniyenin altına çekmek için ideal
             temperature: 0.7
         });
 
