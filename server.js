@@ -55,9 +55,47 @@ async function initLlamaModel() {
     console.log("🚀 Goober Model Oturumu Başarıyla Oluşturuldu!");
 }
 
-initLlamaModel().catch((err) => {
-    console.error("❌ Model yüklenirken hata oluştu:", err);
-});
+async function initLlamaModel() {
+    console.log("⚙️  Llama Engine başlatılıyor...");
+    llama = await getLlama();
+
+    const modelPath = path.join(__dirname, "Llama-3.2-1B-Instruct-Q4_K_M.gguf");
+
+    if (!fs.existsSync(modelPath)) {
+        console.log("🔍 Model yerelde bulunamadı, HuggingFace'ten indiriliyor...");
+        
+        const downloader = await createModelDownloader({
+            modelUrl: "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+            dirPath: __dirname,
+            fileName: "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+        });
+
+        await downloader.download();
+        console.log("✅ İndirme tamamlandı!");
+    } else {
+        console.log("📂 Model zaten diskte mevcut, direkt yükleniyor...");
+    }
+
+    console.log("🧠 Model belleğe düşük RAM ayarlarıyla yükleniyor...");
+    
+    // RAM ÇÖKMESİNİ ENGELLEYEN AYARLAR:
+    model = await llama.loadModel({ 
+        modelPath,
+        gpuLayers: 0 // Sadece CPU kullan
+    });
+
+    context = await model.createContext({
+        contextSize: 512, // Varsayılan 4096 yerine 512 token (RAM'i %70 tasarruf ettirir)
+        batchSize: 256
+    });
+
+    session = new LlamaChatSession({
+        contextSequence: context.getSequence(),
+        systemPrompt: "Sen Goober'sın! Neşeli ve yardımsever bir yapay zeka asistanısın."
+    });
+
+    console.log("🚀 Goober Model Oturumu Başarıyla Oluşturuldu!");
+}
 
 app.post("/api/chat", async (req, res) => {
     try {
