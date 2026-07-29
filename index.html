@@ -622,7 +622,6 @@
         }
 
         async function sendMessage() {
-            // Çift mesaj engelleme kontrolü
             if(isSending) return;
             isSending = true;
 
@@ -631,6 +630,50 @@
             if(!text) {
                 isSending = false;
                 return;
+            }
+
+            appendMessage(text, true);
+            
+            userInput.value = "";
+            userInput.style.height = "auto";
+            
+            setInputState(true);
+            thinkingIndicator.style.display = "flex";
+            scrollToBottom();
+
+            try {
+                // BACKEND UYUMLU MESAJ DİZİSİ (DÜZELTİLDİ)
+                const response = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        messages: [{ role: "user", content: text }]
+                    })
+                });
+
+                if(!response.ok) throw new Error(`Sunucu Hatası: ${response.status}`);
+                
+                thinkingIndicator.style.display = "none";
+                const data = await response.json();
+                
+                const replyText = data.reply || "Goober boş cevap verdi.";
+                
+                appendMessage(
+                    replyText,
+                    false
+                );
+
+                scrollToBottom();
+
+            } catch (error) {
+                thinkingIndicator.style.display = "none";
+                appendMessage("Ağ bağlantısında bir kesinti yaşandı. Lütfen tekrar veri gönder. 🫂", false);
+                console.error(error);
+            } finally {
+                setInputState(false);
+                isSending = false;
             }
 
             appendMessage(text, true);
