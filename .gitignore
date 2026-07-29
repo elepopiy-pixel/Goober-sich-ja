@@ -1,1 +1,6 @@
-.env
+*.gguf
+*.bin
+node_modules/node_modules/
+*.gguf
+node_modules/
+*.gguf
