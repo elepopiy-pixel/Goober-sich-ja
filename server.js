@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import { getLlama, resolveModelFile, LlamaChatSession } from "node-llama-cpp";
+import { getLlama, LlamaChatSession } from "node-llama-cpp";
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -21,25 +21,21 @@ async function initLlamaModel() {
     console.log("⚙️  Llama Engine başlatılıyor...");
     llama = await getLlama();
 
-    console.log("🔍 Model HuggingFace üzerinden kontrol ediliyor / indiriliyor...");
+    // Dizin içindeki hazır GGUF dosyasının tam yolu
+    const modelPath = path.join(__dirname, "Llama-3.2-1B-Instruct-Q4_K_M.gguf");
 
-    // v3+ ile model indirme/çözümleme resolveModelFile ile yapılır:
-    const modelPath = await resolveModelFile({
-        repo: "Qwen/Qwen1.5-1.8B-Chat-GGUF", // İstediğin 1B/1.8B repo
-        fileName: "*q4_k_m.gguf"
-    });
+    console.log(`📂 Yerel dosya yükleniyor: ${modelPath}`);
 
-    console.log(`✅ Model hazır: ${modelPath}`);
-
+    // Modeli yerel dosyadan yüklüyoruz
     model = await llama.loadModel({ modelPath });
     context = await model.createContext();
 
     session = new LlamaChatSession({
         contextSequence: context.getSequence(),
-        systemPrompt: "Sen GooberAI'sın. Sevecen, yardımsever ve neşeli bir yapay zeka asistanısın."
+        systemPrompt: "Sen Goober'sın! Neşeli, sevecen ve yardımsever bir yapay zeka asistanısın."
     });
 
-    console.log("🚀 Goober Model Oturumu Başarıyla Oluşturuldu!");
+    console.log("🚀 Goober Llama 3.2 1B Modeli Başarıyla Yüklendi!");
 }
 
 initLlamaModel().catch((err) => {
@@ -56,7 +52,7 @@ app.post("/api/chat", async (req, res) => {
         const lastUserMessage = messages[messages.length - 1]?.content;
 
         if (!session) {
-            return res.status(503).json({ error: "Model henüz yükleniyor, lütfen bekleyin..." });
+            return res.status(503).json({ error: "Model henüz yükleniyor, lütfen birkaç saniye sonra tekrar deneyin." });
         }
 
         const reply = await session.prompt(lastUserMessage, {
@@ -68,10 +64,10 @@ app.post("/api/chat", async (req, res) => {
 
     } catch (err) {
         console.error("Inference Hatası:", err);
-        res.status(500).json({ error: "Model yanıt üretirken hata oluştu." });
+        res.status(500).json({ error: "Model yanıt üretirken bir hata oluştu." });
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`Goober Local Engine http://localhost:${PORT} adresinde aktif!`);
+    console.log(`Goober Local Server http://localhost:${PORT} adresinde aktif!`);
 });
