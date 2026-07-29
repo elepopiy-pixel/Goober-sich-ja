@@ -1,9 +1,8 @@
 import express from "express";
 import path from "path";
-import fs from "fs";
 import cors from "cors";
 import { fileURLToPath } from "url";
-import { getLlama, createModelDownloader, LlamaChatSession } from "node-llama-cpp";
+import { getLlama, LlamaChatSession } from "node-llama-cpp";
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -11,7 +10,7 @@ const PORT = process.env.PORT || 10000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 1. CORS & JSON Middleware (Ağ Kesintisi ve Erişim Engellerini Önler)
+// 1. Middleware Ayarları
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
@@ -25,35 +24,19 @@ async function initLlamaModel() {
     console.log("⚙️  Llama Engine başlatılıyor...");
     llama = await getLlama();
 
-    const modelFileName = "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf";
-    const modelPath = path.join(__dirname, modelFileName);
+    // İnternetten indirme yok, doğrudan dizindeki hazır model dosyasının yolu:
+    const modelPath = path.join(__dirname, "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf");
 
-    // Modeli yerelde yoksa HuggingFace'ten indiriyoruz
-    if (!fs.existsSync(modelPath)) {
-        console.log("🔍 0.5B Model yerelde bulunamadı, HuggingFace'ten indiriliyor...");
-        
-        const downloader = await createModelDownloader({
-            modelUrl: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
-            dirPath: __dirname,
-            fileName: modelFileName
-        });
+    console.log(`📂 Yerel model dosyası belleğe yükleniyor: ${modelPath}`);
 
-        await downloader.download();
-        console.log("✅ 0.5B Model başarıyla indirildi!");
-    } else {
-        console.log("📂 0.5B Model zaten diskte mevcut, yükleniyor...");
-    }
-
-    console.log("🧠 Model ultra-hafif RAM ayarlarıyla belleğe yükleniyor...");
-    
     model = await llama.loadModel({ 
         modelPath,
-        gpuLayers: 0
+        gpuLayers: 0 // CPU modunda çalıştır
     });
 
-    // 512 MB RAM ve 50sn Timeout Sınırına Takılmamak İçin Hız Ayarları
+    // RAM kullanımı ve hız ayarları (512 MB Render limiti için)
     context = await model.createContext({
-        contextSize: 384, // Daha hızlı yanıt ve minimum RAM için 384 token
+        contextSize: 384,
         batchSize: 128
     });
 
@@ -83,9 +66,8 @@ app.post("/api/chat", async (req, res) => {
             return res.status(503).json({ error: "Model henüz yükleniyor, lütfen bekleyin..." });
         }
 
-        // Hızlı yanıt üretimi için maxTokens kısıtlaması
         const reply = await session.prompt(lastUserMessage, {
-            maxTokens: 128,  // Yanıt süresini 50 saniyenin altına çekmek için ideal
+            maxTokens: 128,
             temperature: 0.7
         });
 
